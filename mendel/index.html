@@ -827,7 +827,7 @@ function stepDone(n) {
   switch (n) {
     case 1: return seedsReady();
     case 2: return seedsReady() && roles().every(r => okStat(S.ans[r].gStat) && okStat(S.ans[r].mStat));
-    case 3: return grown();
+    case 3: return grown() && WHY.every((w, i) => S.flip[i]);
     case 4: return S.pol.bagged && S.pol.quiz === QZ4[S.mode].a;
     case 5: return okStat(S.pun.gStat) && S.pun.cStat === 'ok';
     case 6: return S.hv.pods.length > 0 && S.hv.pods.every(p => p.open);
@@ -1156,10 +1156,10 @@ RENDER[3] = () => {
     </div>
   </section>
   <section class="card soft">
-    <div class="card-h"><h3>멘델은 왜 완두로 실험했을까?</h3><span class="muted small">카드를 눌러 확인해요</span></div>
+    <div class="card-h"><h3>멘델은 왜 완두로 실험했을까?</h3><span class="muted small">카드를 눌러 확인해요 (${WHY.filter((w, i) => S.flip[i]).length}/${WHY.length})</span></div>
     <div class="flips">${WHY.map((w, i) => `<button class="flip ${S.flip[i] ? 'on' : ''}" data-act="flip" data-arg="${i}" aria-expanded="${!!S.flip[i]}"><span class="front">까닭 ${i + 1}<small>눌러서 확인</small></span><span class="back"><b>${w[0]}</b>${w[1]}</span></button>`).join('')}</div>
   </section>
-  ${nav(2, 4, stepDone(3), '꽃이 피어야 다음 단계로 갈 수 있어요')}`;
+  ${nav(2, 4, stepDone(3), done ? '아래 카드 4장을 모두 눌러 읽어야 다음 단계로 갈 수 있어요' : '꽃이 피어야 다음 단계로 갈 수 있어요')}`;
   S.grew = false;
   return html;
 };
@@ -1181,7 +1181,7 @@ ACT.water = () => {
     if (S.step === 3) render();
   }, 1000);
 };
-ACT.flip = i => { S.flip[i] = !S.flip[i]; render(); };
+ACT.flip = i => { if (S.flip[i]) return; S.flip[i] = true; render(); };
 
 /* =========================================================
    8. 4단계: 수분하기
@@ -1545,7 +1545,11 @@ RENDER[7] = () => {
     <div class="tray">${counted ? `<div class="empty-note">분류 끝! 완두 ${n}개를 모두 셌어요.</div>` : (tray || '<div class="empty-note">직접 분류할 완두를 모두 나눴어요.</div>')}</div>
     <div class="bins">${bins}</div>
     ${T.msg ? `<div class="fb ${T.msg.type}" role="status">${T.msg.text}</div>` : ''}
-    ${!counted ? `<div class="row"><button class="btn yellow" data-act="machine">분류 기계로 ${n}개 모두 세기</button>${n > 20 ? `<span class="muted small">먼저 ${Math.min(20, n)}개를 직접 나눠 보고, 나머지는 기계로 세요.</span>` : ''}</div>` : ''}
+    ${!counted ? (() => {
+      const left = T.tray.length;
+      return `<div class="row"><button class="btn yellow" data-act="machine" ${left ? 'disabled' : ''}>분류 기계로 ${n}개 모두 세기</button>
+        <span class="muted small">${left ? `먼저 위의 완두 ${left}개를 직접 나눠 보세요. 다 나누면 나머지는 기계로 셀 수 있어요.` : `직접 나누기 끝! 나머지 ${n - Math.min(20, n)}개는 기계로 세어 봐요.`}</span></div>`;
+    })() : ''}
   </section>`;
 
   if (counted) {
@@ -1641,6 +1645,8 @@ ACT.bin = k => {
 };
 ACT.machine = () => {
   const T = S.st, from = { ...T.binned };
+  if (T.counted) return;
+  if (T.tray.length) return toast('먼저 위의 완두를 모두 직접 나눠 주세요');
   T.counted = true; T.msg = null; T.sel = null;
   render();
   const obs = obsCounts();
