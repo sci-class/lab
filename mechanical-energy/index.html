@@ -57,6 +57,7 @@ h1{font-size:clamp(22px,3.2vw,30px);line-height:1.25;margin:2px 0 0;text-wrap:ba
 input,select,textarea,button{font:inherit;color:inherit}
 input[type=text],input:not([type]),select,textarea{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 .who input{width:110px}
+.who input.need{border:2px solid var(--bad);background:var(--bad-soft)}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* stepper */
@@ -991,7 +992,7 @@ O→A  위치 에너지 감소량 ${fmt(e.O.pe-e.A.pe)} J,  운동 에너지 증
 O→B  위치 에너지 감소량 ${fmt(e.O.pe)} J,  운동 에너지 증가량 ${fmt(e.B.ke)} J
 
 결론: ${$('#concl').value.trim()}`;}
-$('#copyBtn').onclick=()=>{if(!conclCheck().ok){renderGate();return;}const t=reportText();
+$('#copyBtn').onclick=()=>{if(!conclCheck().ok){renderGate();return;}if(!whoCheck())return;const t=reportText();
   try{navigator.clipboard.writeText(t).then(()=>dl('텍스트를 복사했어요. 과제 제출란에 붙여 넣으세요.','ok'),()=>dl('복사가 막혀 있어요. PDF로 내려받아 제출하세요.','bad'));}catch(_){dl('복사가 막혀 있어요. PDF로 내려받아 제출하세요.','bad');}};
 function dl(t,k){const el=$('#dlMsg');el.textContent=t||'';el.className='msg'+(t?' '+(k||'info'):'');}
 function fileBase(){const id=$('#stuId').value.trim(),nm=$('#stuName').value.trim();return ('역학적에너지_보고서'+(id?'_'+id:'')+(nm?'_'+nm:'')).replace(/[\\/:*?"<>|]/g,'');}
@@ -1009,7 +1010,7 @@ body{background:#e9eeee;margin:0;padding:24px 0;display:flex;flex-direction:colu
 @media print{body{background:#fff;padding:0;gap:0}.rp-page{box-shadow:none;page-break-after:always}}</style></head><body>${buildReport()}</body></html>`;}
 let busy=false;
 $('#pdfBtn').onclick=async()=>{
-  if(busy)return;if(!conclCheck().ok){renderGate();return;}if(!$('#stuName').value.trim()){dl('맨 위에 학번과 이름을 먼저 쓰세요.','bad');$('#stuName').focus();return;}
+  if(busy)return;if(!conclCheck().ok){renderGate();return;}if(!whoCheck())return;
   busy=true;$('#pdfBtn').disabled=true;dl('보고서를 만드는 중이에요…','info');
   try{
     let blob,name;
@@ -1032,7 +1033,15 @@ $('#pdfBtn').onclick=async()=>{
   }catch(err){dl('보고서를 만들지 못했어요. 다시 눌러 보세요.','bad');}
   finally{busy=false;$('#pdfBtn').disabled=!conclCheck().ok;}
 };
-$('#stuId').addEventListener('input',renderReport);$('#stuName').addEventListener('input',renderReport);
+// 학번과 이름을 모두 써야 보고서를 내려받거나 복사할 수 있음
+function whoCheck(){const id=$('#stuId'),nm=$('#stuName'),miss=[];
+  if(!id.value.trim())miss.push(id);if(!nm.value.trim())miss.push(nm);
+  [id,nm].forEach(el=>el.classList.toggle('need',miss.includes(el)));
+  if(!miss.length)return true;
+  const what=miss.length===2?'학번과 이름':(miss[0]===id?'학번':'이름');
+  dl(`맨 위에 ${what}을 먼저 쓰세요. 학번과 이름을 모두 써야 보고서를 내려받을 수 있어요.`,'bad');
+  window.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>miss[0].focus({preventScroll:true}),300);return false;}
+['#stuId','#stuName'].forEach(k=>$(k).addEventListener('input',e=>{if(e.target.value.trim())e.target.classList.remove('need');renderReport();}));
 
 /* ---------- 계산기 ---------- */
 const C={expr:'',res:'0',just:false,target:null};
