@@ -208,6 +208,13 @@ textarea{width:100%;min-height:120px;resize:vertical;line-height:1.6}
 .calc-tip{margin:0;font-size:12px;color:var(--muted)}
 .num.target{outline:2px solid var(--accent);outline-offset:1px}
 .calc-open-btn{border-color:var(--accent);color:var(--accent)}
+.checks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.checks-lab{color:var(--muted);margin-right:2px}
+.chk{border:1px solid var(--line);border-radius:999px;padding:2px 10px 2px 8px;color:var(--muted);background:var(--wall)}
+.chk::before{content:"○ "}
+.chk.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.chk.ok::before{content:"✓ "}
+.chk b{font-weight:400}
 .calc-row{background:var(--accent-soft);border-radius:8px;padding:8px 10px}
 body.calc-open .wrap{padding-bottom:440px}
 
@@ -546,18 +553,26 @@ body.calc-open .wrap{padding-bottom:440px}
       </div>
       <label data-step="7" for="concl" class="note">쇠구슬이 자유 낙하 할 때 세 에너지가 어떻게 변하는지 내 실험 결과를 근거로 설명해 보세요.</label>
       <textarea data-step="7" id="concl" placeholder="쇠구슬이 떨어지는 동안 위치 에너지는 …"></textarea>
+      <div data-step="7" class="checks" aria-live="polite">
+        <span class="checks-lab">꼭 들어가야 할 것</span>
+        <span class="chk" data-c="pe">위치 에너지</span>
+        <span class="chk" data-c="ke">운동 에너지</span>
+        <span class="chk" data-c="me">역학적 에너지</span>
+        <span class="chk" data-c="len">30자 이상 <b id="conclLen">(0자)</b></span>
+      </div>
       <div data-step="7" class="row">
         <button class="btn" type="button" id="sampleBtn" disabled>예시 답안 보기</button>
-        <span class="note" id="conclCnt">20자 이상 쓰면 예시 답안을 볼 수 있어요.</span>
+        <span class="note" id="conclCnt">결론을 다 쓰면 예시 답안과 비교해 볼 수 있어요.</span>
       </div>
       <p class="sample" data-step="7" id="sample" hidden>쇠구슬이 떨어지는 동안 높이가 낮아지므로 위치 에너지는 감소하고, 속력이 빨라지므로 운동 에너지는 증가한다. 이때 감소한 위치 에너지만큼 운동 에너지가 증가하므로, 위치 에너지와 운동 에너지의 합인 역학적 에너지는 일정하게 보존된다. 실험에서 역학적 에너지가 조금씩 줄어든 것은 공기 저항과 관 벽과의 마찰 때문이다.</p>
       <div data-step="7" style="display:flex;flex-direction:column;gap:10px">
         <h3>나의 실험 보고서</h3>
         <p class="note">학번과 이름을 맨 위에 쓰면 보고서에 들어가요. 결론을 고치면 미리보기도 바로 바뀝니다.</p>
         <div class="row">
-          <button class="btn primary" type="button" id="pdfBtn">보고서 PDF 내려받기</button>
-          <button class="btn" type="button" id="copyBtn">텍스트로 복사</button>
+          <button class="btn primary" type="button" id="pdfBtn" disabled>보고서 PDF 내려받기</button>
+          <button class="btn" type="button" id="copyBtn" disabled>텍스트로 복사</button>
         </div>
+        <p class="note" id="gateNote">위의 결론을 모두 써야 보고서를 내려받을 수 있어요.</p>
         <p class="msg" id="dlMsg"></p>
         <div class="rp-preview" id="rpPreview"><div class="rp-scale" id="rpScale"></div></div>
       </div>
@@ -623,7 +638,7 @@ function msg(n,text,kind){const el=$('#msg'+n);el.textContent=text||'';el.classN
 function mark(el,ok){el.classList.toggle('ok',ok===true);el.classList.toggle('bad',ok===false);}
 
 /* ---------- 단계 표시 ---------- */
-function doneOf(n){return [null,S.massOk,allPlaced()&&S.tilt===0,S.heightsOk,S.tableOk,S.ok5,S.ok6,$('#concl').value.trim().length>=20][n];}
+function doneOf(n){return [null,S.massOk,allPlaced()&&S.tilt===0,S.heightsOk,S.tableOk,S.ok5,S.ok6,conclCheck().ok][n];}
 function maxStep(){let m=1;while(m<7&&doneOf(m))m++;return m;}
 function renderSteps(){
   const ol=$('#steps');ol.innerHTML='';
@@ -634,6 +649,7 @@ function renderSteps(){
     b.disabled=n>maxStep();
     b.onclick=()=>go(n);li.appendChild(b);ol.appendChild(li);});
   $$('[data-step]').forEach(el=>{el.hidden=Number(el.dataset.step)!==S.step;});
+  $('#sample').hidden=!(S.step===7&&sampleOn&&conclCheck().ok);
   $('#levelBox').hidden=!(S.step===2&&S.placed.tube);
   $('#prevBtn').disabled=S.step===1;
   $('#nextBtn').hidden=S.step===7;
@@ -645,7 +661,7 @@ function renderSteps(){
 }
 function go(n){if(n>maxStep()||S.anim)return;S.step=n;
   if(n===5)buildMyData(); if(n===6)renderBars();
-  renderAll(); if(n===7)renderReport(); window.scrollTo({top:0,behavior:'smooth'});}
+  renderAll(); if(n===7){renderGate();renderReport();} window.scrollTo({top:0,behavior:'smooth'});}
 
 /* ---------- 1. 질량 ---------- */
 function renderRack(){
@@ -863,9 +879,23 @@ $('#check6').onclick=()=>{
   renderAll();};
 
 /* ---------- 7. 정리하기 3 ---------- */
-$('#concl').addEventListener('input',()=>{const n=$('#concl').value.trim().length;$('#sampleBtn').disabled=n<20;
-  $('#conclCnt').textContent=n<20?`20자 이상 쓰면 예시 답안을 볼 수 있어요. (${n}자)`:`${n}자`;renderReport();renderSteps();});
-$('#sampleBtn').onclick=()=>{$('#sample').hidden=!$('#sample').hidden;$('#sampleBtn').textContent=$('#sample').hidden?'예시 답안 보기':'예시 답안 숨기기';};
+function conclCheck(){const t=$('#concl').value.trim(),z=t.replace(/\s+/g,'');
+  const c={pe:z.includes('위치에너지'),ke:z.includes('운동에너지'),me:z.includes('역학적에너지'),len:t.length>=30};
+  c.ok=c.pe&&c.ke&&c.me&&c.len;c.n=t.length;return c;}
+function renderGate(){const c=conclCheck();
+  $$('.chk').forEach(el=>el.classList.toggle('ok',!!c[el.dataset.c]));$('#conclLen').textContent=`(${c.n}자)`;
+  $('#pdfBtn').disabled=!c.ok;$('#copyBtn').disabled=!c.ok;
+  const miss=[c.pe?'':'‘위치 에너지’',c.ke?'':'‘운동 에너지’',c.me?'':'‘역학적 에너지’'].filter(Boolean);
+  $('#gateNote').textContent=c.ok?'결론을 다 썼어요. 보고서를 내려받을 수 있어요.':
+    (miss.length?`결론에 ${miss.join(', ')}를 넣어 세 에너지의 관계를 설명해야 보고서를 내려받을 수 있어요.`:'결론을 30자 이상 써야 보고서를 내려받을 수 있어요.');
+  $('#gateNote').style.color=c.ok?'var(--ok)':'';
+  $('#sampleBtn').disabled=!c.ok;
+  if(!c.ok){sampleOn=false;$('#sample').hidden=true;$('#sampleBtn').textContent='예시 답안 보기';}
+  $('#conclCnt').textContent=c.ok?'내 결론과 예시 답안을 비교해 보세요.':'결론을 다 쓰면 예시 답안과 비교해 볼 수 있어요.';
+  if(!c.ok)dl('','');}
+$('#concl').addEventListener('input',()=>{renderGate();renderReport();renderSteps();});
+let sampleOn=false;
+$('#sampleBtn').onclick=()=>{sampleOn=!sampleOn;$('#sample').hidden=!sampleOn;$('#sampleBtn').textContent=sampleOn?'예시 답안 숨기기':'예시 답안 보기';};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const iv=(box,k,fb)=>{const el=$(`${box} [data-k="${k}"]`);const t=el?el.value.trim():'';return t!==''?t:fmt(fb);};
 function today(){const d=new Date();return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;}
@@ -951,7 +981,7 @@ O→A  위치 에너지 감소량 ${fmt(e.O.pe-e.A.pe)} J,  운동 에너지 증
 O→B  위치 에너지 감소량 ${fmt(e.O.pe)} J,  운동 에너지 증가량 ${fmt(e.B.ke)} J
 
 결론: ${$('#concl').value.trim()}`;}
-$('#copyBtn').onclick=()=>{const t=reportText();
+$('#copyBtn').onclick=()=>{if(!conclCheck().ok){renderGate();return;}const t=reportText();
   try{navigator.clipboard.writeText(t).then(()=>dl('텍스트를 복사했어요. 과제 제출란에 붙여 넣으세요.','ok'),()=>dl('복사가 막혀 있어요. PDF로 내려받아 제출하세요.','bad'));}catch(_){dl('복사가 막혀 있어요. PDF로 내려받아 제출하세요.','bad');}};
 function dl(t,k){const el=$('#dlMsg');el.textContent=t||'';el.className='msg'+(t?' '+(k||'info'):'');}
 function fileBase(){const id=$('#stuId').value.trim(),nm=$('#stuName').value.trim();return ('역학적에너지_보고서'+(id?'_'+id:'')+(nm?'_'+nm:'')).replace(/[\\/:*?"<>|]/g,'');}
@@ -969,7 +999,7 @@ body{background:#e9eeee;margin:0;padding:24px 0;display:flex;flex-direction:colu
 @media print{body{background:#fff;padding:0;gap:0}.rp-page{box-shadow:none;page-break-after:always}}</style></head><body>${buildReport()}</body></html>`;}
 let busy=false;
 $('#pdfBtn').onclick=async()=>{
-  if(busy)return;if(!$('#stuName').value.trim()){dl('맨 위에 학번과 이름을 먼저 쓰세요.','bad');$('#stuName').focus();return;}
+  if(busy)return;if(!conclCheck().ok){renderGate();return;}if(!$('#stuName').value.trim()){dl('맨 위에 학번과 이름을 먼저 쓰세요.','bad');$('#stuName').focus();return;}
   busy=true;$('#pdfBtn').disabled=true;dl('보고서를 만드는 중이에요…','info');
   try{
     let blob,name;
@@ -990,7 +1020,7 @@ $('#pdfBtn').onclick=async()=>{
     else if(r==='rate_limited')dl('저장 창이 이미 열려 있어요. 잠시 뒤 다시 누르세요.','info');
     else dl('이 화면에서는 파일을 저장할 수 없어요. 텍스트로 복사해서 제출하세요.','bad');
   }catch(err){dl('보고서를 만들지 못했어요. 다시 눌러 보세요.','bad');}
-  finally{busy=false;$('#pdfBtn').disabled=false;}
+  finally{busy=false;$('#pdfBtn').disabled=!conclCheck().ok;}
 };
 $('#stuId').addEventListener('input',renderReport);$('#stuName').addEventListener('input',renderReport);
 
@@ -1063,7 +1093,7 @@ $('#resetAll').onclick=()=>{
   resetArm=false;$('#resetAll').textContent='실험 처음부터 다시 하기';
   S=fresh();$$('.panel input:not([type=range]),.panel textarea').forEach(el=>{el.value='';mark(el,null);});
   $$('.panel select').forEach(el=>el.value='');for(let i=1;i<=6;i++)msg(i,'');
-  setLcd('A','--.--');setLcd('B','--.--');$('#sample').hidden=true;$('#sampleBtn').disabled=true;
+  setLcd('A','--.--');setLcd('B','--.--');sampleOn=false;$('#sample').hidden=true;$('#sampleBtn').disabled=true;renderGate();
   renderAll();window.scrollTo({top:0});};
 
 buildRuler();build5();build6();renderAll();
