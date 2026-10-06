@@ -12,7 +12,7 @@
   --bg:#eef2f1; --paper:#ffffff; --ink:#1c2a2d; --muted:#5a6b6f; --line:#d3dcdb;
   --accent:#0e6b78; --accent-ink:#ffffff; --accent-soft:#dcedef;
   --pe:#c45f1c; --ke:#2a5fc4; --me:#6b48b0;
-  --ok:#1d8a4b; --ok-soft:#dff3e6; --bad:#c03636; --bad-soft:#fbe4e4;
+  --ok:#1d8a4b; --ok-soft:#dff3e6; --warn:#b4530a; --warn-soft:#fdeedd; --bad:#c03636; --bad-soft:#fbe4e4;
   --wall:#f6f8f7; --wood:#e6d6bb; --wood-line:#d4c09f;
   --glass:rgba(160,205,220,.28); --glass-edge:#7fa9b6;
   --metal:#9aa4a8; --metal-dark:#5f686c; --sensor:#262c2f;
@@ -26,7 +26,7 @@
   --bg:#111819; --paper:#192224; --ink:#e3ecea; --muted:#98a9a7; --line:#2d3a3c;
   --accent:#4fb4c1; --accent-ink:#0b1a1c; --accent-soft:#16343a;
   --pe:#ec9454; --ke:#72a0f2; --me:#a78ee6;
-  --ok:#4cc27f; --ok-soft:#153526; --bad:#ef6d6d; --bad-soft:#3c1b1b;
+  --ok:#4cc27f; --ok-soft:#153526; --warn:#f5a54a; --warn-soft:#3a2612; --bad:#ef6d6d; --bad-soft:#3c1b1b;
   --wall:#172022; --wood:#3b3226; --wood-line:#4a3f30;
   --glass:rgba(140,200,220,.14); --glass-edge:#6d98a5;
   --metal:#78848a; --metal-dark:#4f585c; --sensor:#0b0e0f;
@@ -37,7 +37,7 @@
   --bg:#111819; --paper:#192224; --ink:#e3ecea; --muted:#98a9a7; --line:#2d3a3c;
   --accent:#4fb4c1; --accent-ink:#0b1a1c; --accent-soft:#16343a;
   --pe:#ec9454; --ke:#72a0f2; --me:#a78ee6;
-  --ok:#4cc27f; --ok-soft:#153526; --bad:#ef6d6d; --bad-soft:#3c1b1b;
+  --ok:#4cc27f; --ok-soft:#153526; --warn:#f5a54a; --warn-soft:#3a2612; --bad:#ef6d6d; --bad-soft:#3c1b1b;
   --wall:#172022; --wood:#3b3226; --wood-line:#4a3f30;
   --glass:rgba(140,200,220,.14); --glass-edge:#6d98a5;
   --metal:#78848a; --metal-dark:#4f585c; --sensor:#0b0e0f;
@@ -208,11 +208,11 @@ textarea{width:100%;min-height:120px;resize:vertical;line-height:1.6}
 .calc-tip{margin:0;font-size:12px;color:var(--muted)}
 .num.target{outline:2px solid var(--accent);outline-offset:1px}
 .calc-open-btn{border-color:var(--accent);color:var(--accent)}
-.checks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
-.checks-lab{color:var(--muted);margin-right:2px}
-.chk{border:1px solid var(--line);border-radius:999px;padding:2px 10px 2px 8px;color:var(--muted);background:var(--wall)}
+.checks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.checks-lab{color:var(--ink);font-weight:700;margin-right:2px}
+.chk{border:1.5px solid var(--warn);border-radius:999px;padding:3px 12px 3px 9px;color:var(--warn);background:var(--warn-soft);font-weight:700}
 .chk::before{content:"○ "}
-.chk.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.chk.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft);font-weight:500}
 .chk.ok::before{content:"✓ "}
 .chk b{font-weight:400}
 .calc-row{background:var(--accent-soft);border-radius:8px;padding:8px 10px}
@@ -836,14 +836,18 @@ $('#check5').onclick=()=>{
   const get=k=>$(`#builder5 [data-k="${k}"]`);
   const chk=(k,ok)=>{mark(get(k),ok);if(!ok)bad++;};
   ['O','A','B'].forEach(p=>{const d=e[p];
-    chk(p+'.pe.m',near(num(get(p+'.pe.m').value),e.m,0.0005));
-    chk(p+'.pe.h',near(num(get(p+'.pe.h').value),d.h,0.0005));
+    // 곱셈은 순서가 상관없으므로 질량과 높이를 바꿔 써도 정답
+    const x=num(get(p+'.pe.m').value),y=num(get(p+'.pe.h').value),Em=v=>near(v,e.m,0.0005),Eh=v=>near(v,d.h,0.0005);
+    const sw=Em(y)&&Eh(x)&&!(Em(x)&&Eh(y));
+    chk(p+'.pe.m',sw?true:Em(x));chk(p+'.pe.h',sw?true:Eh(y));
     chk(p+'.pe.val',near(num(get(p+'.pe.val').value),d.pe,0.006));
     chk(p+'.ke.m',near(num(get(p+'.ke.m').value),e.m,0.0005));
     chk(p+'.ke.v',near(num(get(p+'.ke.v').value),d.v,0.001));
     chk(p+'.ke.val',near(num(get(p+'.ke.val').value),d.ke,0.006));
     const a=num(get(p+'.me.a').value),b=num(get(p+'.me.b').value),v=num(get(p+'.me.val').value);
-    chk(p+'.me.a',near(a,d.pe,0.006));chk(p+'.me.b',near(b,d.ke,0.006));
+    // 덧셈도 순서가 상관없으므로 위치 에너지와 운동 에너지를 바꿔 써도 정답
+    const Ep=v=>near(v,d.pe,0.006),Ek=v=>near(v,d.ke,0.006),sw2=Ep(b)&&Ek(a)&&!(Ep(a)&&Ek(b));
+    chk(p+'.me.a',sw2?true:Ep(a));chk(p+'.me.b',sw2?true:Ek(b));
     chk(p+'.me.val',near(v,d.pe+d.ke,0.012)&&(!Number.isFinite(a+b)||near(v,a+b,0.006)));
   });
   if(!bad){S.ok5=true;msg(5,'모든 식과 값을 바르게 구했어요. 다음 단계에서 에너지 변화를 비교해 보세요.','ok');}
