@@ -208,9 +208,13 @@ textarea{width:100%;min-height:120px;resize:vertical;line-height:1.6}
 .calc-tip{margin:0;font-size:12px;color:var(--muted)}
 .num.target{outline:2px solid var(--accent);outline-offset:1px}
 .calc-open-btn{border-color:var(--accent);color:var(--accent)}
-.checks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
-.checks-lab{color:var(--ink);font-weight:700;margin-right:2px}
-.chk{border:1.5px solid var(--warn);border-radius:999px;padding:3px 12px 3px 9px;color:var(--warn);background:var(--warn-soft);font-weight:700}
+.checks{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.checks-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.checks-lab{color:var(--ink);font-weight:700}
+.checks-len{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.chips{display:grid;grid-template-columns:repeat(4,minmax(0,auto));justify-content:start;gap:6px}
+.chk{border:1.5px solid var(--warn);border-radius:999px;padding:3px 11px 3px 8px;color:var(--warn);background:var(--warn-soft);font-weight:700;white-space:nowrap;text-align:center}
+@media (max-width:460px){ .chips{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .chk::before{content:"○ "}
 .chk.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft);font-weight:500}
 .chk.ok::before{content:"✓ "}
@@ -554,11 +558,13 @@ body.calc-open .wrap{padding-bottom:440px}
       <label data-step="7" for="concl" class="note">쇠구슬이 자유 낙하 할 때 세 에너지가 어떻게 변하는지 내 실험 결과를 근거로 설명해 보세요.</label>
       <textarea data-step="7" id="concl" placeholder="쇠구슬이 떨어지는 동안 위치 에너지는 …"></textarea>
       <div data-step="7" class="checks" aria-live="polite">
-        <span class="checks-lab">꼭 들어가야 할 것</span>
-        <span class="chk" data-c="pe">위치 에너지</span>
-        <span class="chk" data-c="ke">운동 에너지</span>
-        <span class="chk" data-c="me">역학적 에너지</span>
-        <span class="chk" data-c="len">30자 이상 <b id="conclLen">(0자)</b></span>
+        <div class="checks-top"><span class="checks-lab">꼭 들어가야 할 것</span><span class="checks-len" id="conclLen">0자</span></div>
+        <div class="chips">
+          <span class="chk" data-c="pe">위치 에너지</span>
+          <span class="chk" data-c="ke">운동 에너지</span>
+          <span class="chk" data-c="me">역학적 에너지</span>
+          <span class="chk" data-c="len">30자 이상</span>
+        </div>
       </div>
       <div data-step="7" class="row">
         <button class="btn" type="button" id="sampleBtn" disabled>예시 답안 보기</button>
@@ -887,7 +893,7 @@ function conclCheck(){const t=$('#concl').value.trim(),z=t.replace(/\s+/g,'');
   const c={pe:z.includes('위치에너지'),ke:z.includes('운동에너지'),me:z.includes('역학적에너지'),len:t.length>=30};
   c.ok=c.pe&&c.ke&&c.me&&c.len;c.n=t.length;return c;}
 function renderGate(){const c=conclCheck();
-  $$('.chk').forEach(el=>el.classList.toggle('ok',!!c[el.dataset.c]));$('#conclLen').textContent=`(${c.n}자)`;
+  $$('.chk').forEach(el=>el.classList.toggle('ok',!!c[el.dataset.c]));$('#conclLen').textContent=`지금 ${c.n}자`;
   $('#pdfBtn').disabled=!c.ok;$('#copyBtn').disabled=!c.ok;
   const miss=[c.pe?'':'‘위치 에너지’',c.ke?'':'‘운동 에너지’',c.me?'':'‘역학적 에너지’'].filter(Boolean);
   $('#gateNote').textContent=c.ok?'결론을 다 썼어요. 보고서를 내려받을 수 있어요.':
